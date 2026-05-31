@@ -1,0 +1,15 @@
+.env
+
+# Build output
+build/
+out/
+
+# vcpkg
+vcpkg_installed/
+
+# Maya plug-in binaries and MSVC link artifacts
+*.mll
+*.pdb
+*.ilk
+*.exp
+*.lib
