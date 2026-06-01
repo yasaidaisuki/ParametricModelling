@@ -18,6 +18,8 @@ MObject ParametricBridgeNode::inTreadDepth;
 MObject ParametricBridgeNode::inStepCount;
 MObject ParametricBridgeNode::inBridgeLength;
 MObject ParametricBridgeNode::inDeckScale;
+MObject ParametricBridgeNode::inDeckSegments;
+MObject ParametricBridgeNode::inArchHeight;
 MObject ParametricBridgeNode::outMesh;
 
 void* ParametricBridgeNode::creator() {
@@ -59,6 +61,16 @@ MStatus ParametricBridgeNode::initialize() {
     nAttr.setKeyable(true);
     addAttribute(inDeckScale);
 
+    inDeckSegments = nAttr.create("deckSegments", "dsg", MFnNumericData::kInt, 10);
+    nAttr.setMin(1);
+    nAttr.setMax(200);
+    nAttr.setKeyable(true);
+    addAttribute(inDeckSegments);
+
+    inArchHeight = nAttr.create("archHeight", "ah", MFnNumericData::kDouble, 0.0);
+    nAttr.setKeyable(true);
+    addAttribute(inArchHeight);
+
     outMesh = tAttr.create("outMesh", "om", MFnData::kMesh);
     tAttr.setStorable(false);
     tAttr.setWritable(false);
@@ -68,8 +80,10 @@ MStatus ParametricBridgeNode::initialize() {
     attributeAffects(inStairWidth,   outMesh);
     attributeAffects(inTreadDepth,   outMesh);
     attributeAffects(inStepCount,    outMesh);
-    attributeAffects(inBridgeLength, outMesh);
-    attributeAffects(inDeckScale,    outMesh);
+    attributeAffects(inBridgeLength,  outMesh);
+    attributeAffects(inDeckScale,     outMesh);
+    attributeAffects(inDeckSegments,  outMesh);
+    attributeAffects(inArchHeight,    outMesh);
 
     return MS::kSuccess;
 }
@@ -83,8 +97,10 @@ MStatus ParametricBridgeNode::compute(const MPlug& plug, MDataBlock& data) {
     params.stairWidth   = data.inputValue(inStairWidth).asDouble();
     params.treadDepth   = data.inputValue(inTreadDepth).asDouble();
     params.stepCount    = data.inputValue(inStepCount).asInt();
-    params.bridgeLength = data.inputValue(inBridgeLength).asDouble()
-                        * data.inputValue(inDeckScale).asDouble();
+    params.bridgeLength  = data.inputValue(inBridgeLength).asDouble()
+                         * data.inputValue(inDeckScale).asDouble();
+    params.deckSegments  = data.inputValue(inDeckSegments).asInt();
+    params.archHeight    = data.inputValue(inArchHeight).asDouble();
 
     MPointArray points;
     MIntArray   faceCounts;

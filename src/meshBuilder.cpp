@@ -55,6 +55,51 @@ void buildStaircaseMesh(
                   points, faceCounts, faceConnects);
 }
 
+static void appendArcDeck(
+    double xStart, double yBase, double width, double thickness,
+    double length, double archHeight, int segments,
+    MPointArray& points,
+    MIntArray&   faceCounts,
+    MIntArray&   faceConnects)
+{
+    const int base = static_cast<int>(points.length());
+    const int N    = segments;
+
+    for (int i = 0; i <= N; ++i) {
+        const double t = (double)i / N;
+        const double x = xStart + t * length;
+        const double y = yBase + archHeight * 3.0 * t * (1.0 - t);
+        points.append(MPoint(x, y,             0.0  ));  // v0 bottom near
+        points.append(MPoint(x, y + thickness, 0.0  ));  // v1 top near
+        points.append(MPoint(x, y,             width));  // v2 bottom far
+        points.append(MPoint(x, y + thickness, width));  // v3 top far
+    }
+
+    for (int i = 0; i < N; ++i) {
+        const int a = base + i*4+0, b = base + i*4+1;
+        const int c = base + i*4+2, d = base + i*4+3;
+        const int e = base + (i+1)*4+0, f = base + (i+1)*4+1;
+        const int g = base + (i+1)*4+2, h = base + (i+1)*4+3;
+
+        const int strip[4][4] = {
+            {a, c, g, e},  // bottom -Y
+            {b, f, h, d},  // top    +Y
+            {a, b, f, e},  // near   -Z
+            {c, g, h, d},  // far    +Z
+        };
+        for (const auto& face : strip) {
+            faceCounts.append(4);
+            for (int v : face) faceConnects.append(v);
+        }
+    }
+
+    // end caps
+    const int a0 = base,      b0 = base+1, c0 = base+2, d0 = base+3;
+    const int aN = base+N*4,  bN = aN+1,   cN = aN+2,   dN = aN+3;
+    faceCounts.append(4); faceConnects.append(a0); faceConnects.append(c0); faceConnects.append(d0); faceConnects.append(b0);
+    faceCounts.append(4); faceConnects.append(aN); faceConnects.append(bN); faceConnects.append(dN); faceConnects.append(cN);
+}
+
 void buildBridgeMesh(
     const BridgeParams& p,
     MPointArray&        points,
@@ -75,10 +120,10 @@ void buildBridgeMesh(
                   p.treadDepth, rh, p.stairWidth,
                   points, faceCounts, faceConnects);
 
-    //   2. Bridge deck
-    appendBox(p.stepCount*p.treadDepth, p.stepCount * rh, 0.0, 
-              p.bridgeLength, rh, p.stairWidth,
-              points, faceCounts, faceConnects);
+    //   2. Bridge deck (arc)
+    appendArcDeck(p.stepCount*p.treadDepth, (p.stepCount - 1) * rh, p.stairWidth, rh,
+                  p.bridgeLength, p.archHeight, p.deckSegments,
+                  points, faceCounts, faceConnects);
 
     //   3. Right stairs 
     for (int i = 0; i < p.stepCount; i++) {

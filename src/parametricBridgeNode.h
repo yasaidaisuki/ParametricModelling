@@ -23,5 +23,7 @@ public:
     static MObject inStepCount;
     static MObject inBridgeLength;
     static MObject inDeckScale;
+    static MObject inDeckSegments;
+    static MObject inArchHeight;
     static MObject outMesh;
 };

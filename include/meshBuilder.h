@@ -22,6 +22,8 @@ struct BridgeParams {
     double stairWidth;
     double treadDepth;
     double bridgeLength;
+    int    deckSegments = 10;
+    double archHeight   = 0.0;
 };
 
 void buildBridgeMesh(
