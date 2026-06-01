@@ -15,3 +15,18 @@ void buildStaircaseMesh(
     MIntArray&             faceCounts,
     MIntArray&             faceConnects
 );
+
+struct BridgeParams {
+    int    stepCount;
+    double totalHeight;
+    double stairWidth;
+    double treadDepth;
+    double bridgeLength;
+};
+
+void buildBridgeMesh(
+    const BridgeParams& params,
+    MPointArray&        points,
+    MIntArray&          faceCounts,
+    MIntArray&          faceConnects
+);

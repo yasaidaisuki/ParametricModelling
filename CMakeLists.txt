@@ -6,8 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ── Maya SDK ──────────────────────────────────────────────────────────────────
 # Override with: cmake -DMAYA_LOCATION="C:/Program Files/Autodesk/MayaXXXX" ...
-set(MAYA_LOCATION "C:/Program Files/Autodesk/Maya2027"
-    CACHE PATH "Maya installation directory")
+set(MAYA_LOCATION "C:/Program Files/Maya_SDK/devkitBase"
+    CACHE PATH "Maya DevKit directory")
 
 set(MAYA_INCLUDE_DIR "${MAYA_LOCATION}/include")
 set(MAYA_LIBRARY_DIR "${MAYA_LOCATION}/lib")
@@ -16,6 +16,7 @@ set(MAYA_LIBRARY_DIR "${MAYA_LOCATION}/lib")
 add_library(ParametricStaircaseNode SHARED
     src/pluginMain.cpp
     src/parametricStaircaseNode.cpp
+    src/parametricBridgeNode.cpp
     src/meshBuilder.cpp
 )
 
@@ -46,6 +47,3 @@ set_target_properties(ParametricStaircaseNode PROPERTIES
     SUFFIX ".mll"
     PREFIX ""
 )
-
-# ── Standalone scratch executable (no Maya dependency) ───────────────────────
-add_executable(LocalTest main.cc)

@@ -1,4 +1,4 @@
-#include "parametricStaircaseNode.h"
+#include "parametricBridgeNode.h"
 #include "meshBuilder.h"
 
 #include <maya/MFnMesh.h>
@@ -11,18 +11,19 @@
 #include <maya/MPointArray.h>
 #include <maya/MIntArray.h>
 
-MTypeId ParametricStaircaseNode::id(0x00080001);
-MObject ParametricStaircaseNode::inTotalHeight;
-MObject ParametricStaircaseNode::inStairWidth;
-MObject ParametricStaircaseNode::inTreadDepth;
-MObject ParametricStaircaseNode::inStepCount;
-MObject ParametricStaircaseNode::outMesh;
+MTypeId ParametricBridgeNode::id(0x00080002);
+MObject ParametricBridgeNode::inTotalHeight;
+MObject ParametricBridgeNode::inStairWidth;
+MObject ParametricBridgeNode::inTreadDepth;
+MObject ParametricBridgeNode::inStepCount;
+MObject ParametricBridgeNode::inBridgeLength;
+MObject ParametricBridgeNode::outMesh;
 
-void* ParametricStaircaseNode::creator() {
-    return new ParametricStaircaseNode();
+void* ParametricBridgeNode::creator() {
+    return new ParametricBridgeNode();
 }
 
-MStatus ParametricStaircaseNode::initialize() {
+MStatus ParametricBridgeNode::initialize() {
     MFnNumericAttribute nAttr;
     MFnTypedAttribute   tAttr;
 
@@ -47,6 +48,11 @@ MStatus ParametricStaircaseNode::initialize() {
     nAttr.setKeyable(true);
     addAttribute(inStepCount);
 
+    inBridgeLength = nAttr.create("bridgeLength", "bl", MFnNumericData::kDouble, 5.0);
+    nAttr.setMin(0.01);
+    nAttr.setKeyable(true);
+    addAttribute(inBridgeLength);
+
     outMesh = tAttr.create("outMesh", "om", MFnData::kMesh);
     tAttr.setStorable(false);
     tAttr.setWritable(false);
@@ -56,34 +62,38 @@ MStatus ParametricStaircaseNode::initialize() {
     attributeAffects(inStairWidth,   outMesh);
     attributeAffects(inTreadDepth,   outMesh);
     attributeAffects(inStepCount,    outMesh);
+    attributeAffects(inBridgeLength, outMesh);
 
     return MS::kSuccess;
 }
 
-MStatus ParametricStaircaseNode::compute(const MPlug& plug, MDataBlock& data) {
+MStatus ParametricBridgeNode::compute(const MPlug& plug, MDataBlock& data) {
     if (plug != outMesh)
         return MS::kUnknownParameter;
 
-    StaircaseParams params;
+    BridgeParams params;
     params.totalHeight  = data.inputValue(inTotalHeight).asDouble();
     params.stairWidth   = data.inputValue(inStairWidth).asDouble();
     params.treadDepth   = data.inputValue(inTreadDepth).asDouble();
     params.stepCount    = data.inputValue(inStepCount).asInt();
+    params.bridgeLength = data.inputValue(inBridgeLength).asDouble();
 
     MPointArray points;
     MIntArray   faceCounts;
     MIntArray   faceConnects;
-    buildStaircaseMesh(params, points, faceCounts, faceConnects);
+    buildBridgeMesh(params, points, faceCounts, faceConnects);
 
     MFnMeshData meshDataFn;
     MObject     meshData = meshDataFn.create();
 
-    MFnMesh meshFn;
-    meshFn.create(
-        static_cast<int>(points.length()),
-        static_cast<int>(faceCounts.length()),
-        points, faceCounts, faceConnects,
-        meshData);
+    if (points.length() > 0) {
+        MFnMesh meshFn;
+        meshFn.create(
+            static_cast<int>(points.length()),
+            static_cast<int>(faceCounts.length()),
+            points, faceCounts, faceConnects,
+            meshData);
+    }
 
     MDataHandle outHandle = data.outputValue(outMesh);
     outHandle.set(meshData);
