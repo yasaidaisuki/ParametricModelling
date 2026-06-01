@@ -22,5 +22,6 @@ public:
     static MObject inTreadDepth;
     static MObject inStepCount;
     static MObject inBridgeLength;
+    static MObject inDeckScale;
     static MObject outMesh;
 };

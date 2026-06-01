@@ -10,14 +10,14 @@ static void appendBox(
 {
     const int b = static_cast<int>(points.length());
 
-    points.append(MPoint(x0,      y0,      z0));
-    points.append(MPoint(x0 + dx, y0,      z0));
-    points.append(MPoint(x0 + dx, y0 + dy, z0));
-    points.append(MPoint(x0,      y0 + dy, z0));
-    points.append(MPoint(x0,      y0,      z0 + dz));
-    points.append(MPoint(x0 + dx, y0,      z0 + dz));
-    points.append(MPoint(x0 + dx, y0 + dy, z0 + dz));
-    points.append(MPoint(x0,      y0 + dy, z0 + dz));
+    points.append(MPoint(x0,      y0,      z0     )); // [0] front lower-left
+    points.append(MPoint(x0 + dx, y0,      z0     )); // [1] back  lower-left
+    points.append(MPoint(x0 + dx, y0 + dy, z0     )); // [2] back  upper-left
+    points.append(MPoint(x0,      y0 + dy, z0     )); // [3] front upper-left
+    points.append(MPoint(x0,      y0,      z0 + dz)); // [4] front lower-right
+    points.append(MPoint(x0 + dx, y0,      z0 + dz)); // [5] back  lower-right
+    points.append(MPoint(x0 + dx, y0 + dy, z0 + dz)); // [6] back  upper-right
+    points.append(MPoint(x0,      y0 + dy, z0 + dz)); // [7] front upper-right
 
     const int faces[6][4] = {
         {0, 1, 5, 4},  // bottom  -Y
@@ -65,9 +65,26 @@ void buildBridgeMesh(
     faceCounts.clear();
     faceConnects.clear();
 
-    // TODO: implement bridge geometry using appendBox
-    // Suggested structure:
-    //   1. Left stairs  — ascending loop  (appendBox × stepCount)
-    //   2. Bridge deck  — one flat box    (appendBox × 1)
-    //   3. Right stairs — descending loop (appendBox × stepCount)
+    if (p.stepCount <= 0) return; 
+
+    const double rh = p.totalHeight / p.stepCount;
+
+    //   1. Left stairs
+    for (int i = 0; i < p.stepCount; i++)
+        appendBox(i * p.treadDepth, i * rh, 0.0,
+                  p.treadDepth, rh, p.stairWidth,
+                  points, faceCounts, faceConnects);
+
+    //   2. Bridge deck
+    appendBox(p.stepCount*p.treadDepth, p.stepCount * rh, 0.0, 
+              p.bridgeLength, rh, p.stairWidth,
+              points, faceCounts, faceConnects);
+
+    //   3. Right stairs 
+    for (int i = 0; i < p.stepCount; i++) {
+        appendBox(p.stepCount*p.treadDepth + p.bridgeLength + i*p.treadDepth, 
+                  (p.stepCount - 1 - i) * rh, 0.0,
+                  p.treadDepth, rh, p.stairWidth,
+                  points, faceCounts, faceConnects);
+    }
 }

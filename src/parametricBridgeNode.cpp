@@ -17,6 +17,7 @@ MObject ParametricBridgeNode::inStairWidth;
 MObject ParametricBridgeNode::inTreadDepth;
 MObject ParametricBridgeNode::inStepCount;
 MObject ParametricBridgeNode::inBridgeLength;
+MObject ParametricBridgeNode::inDeckScale;
 MObject ParametricBridgeNode::outMesh;
 
 void* ParametricBridgeNode::creator() {
@@ -53,6 +54,11 @@ MStatus ParametricBridgeNode::initialize() {
     nAttr.setKeyable(true);
     addAttribute(inBridgeLength);
 
+    inDeckScale = nAttr.create("deckScale", "ds", MFnNumericData::kDouble, 1.0);
+    nAttr.setMin(0.001);
+    nAttr.setKeyable(true);
+    addAttribute(inDeckScale);
+
     outMesh = tAttr.create("outMesh", "om", MFnData::kMesh);
     tAttr.setStorable(false);
     tAttr.setWritable(false);
@@ -63,6 +69,7 @@ MStatus ParametricBridgeNode::initialize() {
     attributeAffects(inTreadDepth,   outMesh);
     attributeAffects(inStepCount,    outMesh);
     attributeAffects(inBridgeLength, outMesh);
+    attributeAffects(inDeckScale,    outMesh);
 
     return MS::kSuccess;
 }
@@ -76,7 +83,8 @@ MStatus ParametricBridgeNode::compute(const MPlug& plug, MDataBlock& data) {
     params.stairWidth   = data.inputValue(inStairWidth).asDouble();
     params.treadDepth   = data.inputValue(inTreadDepth).asDouble();
     params.stepCount    = data.inputValue(inStepCount).asInt();
-    params.bridgeLength = data.inputValue(inBridgeLength).asDouble();
+    params.bridgeLength = data.inputValue(inBridgeLength).asDouble()
+                        * data.inputValue(inDeckScale).asDouble();
 
     MPointArray points;
     MIntArray   faceCounts;
