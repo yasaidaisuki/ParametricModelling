@@ -17,6 +17,11 @@ MObject ParametricStaircaseNode::inStairWidth;
 MObject ParametricStaircaseNode::inTreadDepth;
 MObject ParametricStaircaseNode::inStepCount;
 MObject ParametricStaircaseNode::inChamfer;
+MObject ParametricStaircaseNode::inBumpHeight;
+MObject ParametricStaircaseNode::inBumpFreq;
+MObject ParametricStaircaseNode::inNoiseOctaves;
+MObject ParametricStaircaseNode::inNoiseSeed;
+MObject ParametricStaircaseNode::inWeatherSubdiv;
 MObject ParametricStaircaseNode::outMesh;
 
 void* ParametricStaircaseNode::creator() {
@@ -53,6 +58,31 @@ MStatus ParametricStaircaseNode::initialize() {
     nAttr.setKeyable(true);
     addAttribute(inChamfer);
 
+    inBumpHeight = nAttr.create("bumpHeight", "bh", MFnNumericData::kDouble, 0.0);
+    nAttr.setKeyable(true);
+    addAttribute(inBumpHeight);
+
+    inBumpFreq = nAttr.create("bumpFreq", "bf", MFnNumericData::kDouble, 1.0);
+    nAttr.setMin(0.001);
+    nAttr.setKeyable(true);
+    addAttribute(inBumpFreq);
+
+    inNoiseOctaves = nAttr.create("noiseOctaves", "no", MFnNumericData::kInt, 0);
+    nAttr.setMin(0);
+    nAttr.setMax(8);
+    nAttr.setKeyable(true);
+    addAttribute(inNoiseOctaves);
+
+    inNoiseSeed = nAttr.create("noiseSeed", "nsd", MFnNumericData::kInt, 0);
+    nAttr.setKeyable(true);
+    addAttribute(inNoiseSeed);
+
+    inWeatherSubdiv = nAttr.create("weatherSubdiv", "wsd", MFnNumericData::kInt, 4);
+    nAttr.setMin(1);
+    nAttr.setMax(32);
+    nAttr.setKeyable(true);
+    addAttribute(inWeatherSubdiv);
+
     outMesh = tAttr.create("outMesh", "om", MFnData::kMesh);
     tAttr.setStorable(false);
     tAttr.setWritable(false);
@@ -63,6 +93,11 @@ MStatus ParametricStaircaseNode::initialize() {
     attributeAffects(inTreadDepth,   outMesh);
     attributeAffects(inStepCount,    outMesh);
     attributeAffects(inChamfer,      outMesh);
+    attributeAffects(inBumpHeight,    outMesh);
+    attributeAffects(inBumpFreq,      outMesh);
+    attributeAffects(inNoiseOctaves,  outMesh);
+    attributeAffects(inNoiseSeed,     outMesh);
+    attributeAffects(inWeatherSubdiv, outMesh);
 
     return MS::kSuccess;
 }
@@ -77,6 +112,11 @@ MStatus ParametricStaircaseNode::compute(const MPlug& plug, MDataBlock& data) {
     params.treadDepth   = data.inputValue(inTreadDepth).asDouble();
     params.stepCount    = data.inputValue(inStepCount).asInt();
     params.chamfer      = data.inputValue(inChamfer).asDouble();
+    params.bumpHeight   = data.inputValue(inBumpHeight).asDouble();
+    params.bumpFreq     = data.inputValue(inBumpFreq).asDouble();
+    params.noiseOctaves = data.inputValue(inNoiseOctaves).asInt();
+    params.noiseSeed    = data.inputValue(inNoiseSeed).asInt();
+    params.weatherSubdiv = data.inputValue(inWeatherSubdiv).asInt();
 
     MPointArray points;
     MIntArray   faceCounts;

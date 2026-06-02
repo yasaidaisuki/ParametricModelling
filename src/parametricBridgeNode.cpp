@@ -28,6 +28,9 @@ MObject ParametricBridgeNode::inVoussoirCount;
 MObject ParametricBridgeNode::inVoussoirTaper;
 MObject ParametricBridgeNode::inJointGap;
 MObject ParametricBridgeNode::inKeystoneScale;
+MObject ParametricBridgeNode::inNoiseOctaves;
+MObject ParametricBridgeNode::inNoiseSeed;
+MObject ParametricBridgeNode::inWeatherSubdiv;
 MObject ParametricBridgeNode::outMesh;
 
 void* ParametricBridgeNode::creator() {
@@ -121,6 +124,22 @@ MStatus ParametricBridgeNode::initialize() {
     nAttr.setKeyable(true);
     addAttribute(inKeystoneScale);
 
+    inNoiseOctaves = nAttr.create("noiseOctaves", "no", MFnNumericData::kInt, 0);
+    nAttr.setMin(0);
+    nAttr.setMax(8);
+    nAttr.setKeyable(true);
+    addAttribute(inNoiseOctaves);
+
+    inNoiseSeed = nAttr.create("noiseSeed", "nsd", MFnNumericData::kInt, 0);
+    nAttr.setKeyable(true);
+    addAttribute(inNoiseSeed);
+
+    inWeatherSubdiv = nAttr.create("weatherSubdiv", "wsd", MFnNumericData::kInt, 4);
+    nAttr.setMin(1);
+    nAttr.setMax(32);
+    nAttr.setKeyable(true);
+    addAttribute(inWeatherSubdiv);
+
     outMesh = tAttr.create("outMesh", "om", MFnData::kMesh);
     tAttr.setStorable(false);
     tAttr.setWritable(false);
@@ -142,6 +161,9 @@ MStatus ParametricBridgeNode::initialize() {
     attributeAffects(inVoussoirTaper,      outMesh);
     attributeAffects(inJointGap,           outMesh);
     attributeAffects(inKeystoneScale,      outMesh);
+    attributeAffects(inNoiseOctaves,       outMesh);
+    attributeAffects(inNoiseSeed,          outMesh);
+    attributeAffects(inWeatherSubdiv,      outMesh);
 
     return MS::kSuccess;
 }
@@ -167,6 +189,9 @@ MStatus ParametricBridgeNode::compute(const MPlug& plug, MDataBlock& data) {
     params.voussoirTaper    = data.inputValue(inVoussoirTaper).asDouble();
     params.jointGap         = data.inputValue(inJointGap).asDouble();
     params.keystoneScale    = data.inputValue(inKeystoneScale).asDouble();
+    params.noiseOctaves     = data.inputValue(inNoiseOctaves).asInt();
+    params.noiseSeed        = data.inputValue(inNoiseSeed).asInt();
+    params.weatherSubdiv    = data.inputValue(inWeatherSubdiv).asInt();
 
     MPointArray points;
     MIntArray   faceCounts;

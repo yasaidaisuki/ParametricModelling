@@ -19,6 +19,7 @@ add_library(ParametricStaircaseNode SHARED
     src/parametricBridgeNode.cpp
     src/meshes/staircaseMesh.cpp
     src/meshes/meshPrimitives.cpp
+    src/meshes/noise.cpp
     src/meshes/bridgeMesh.cpp
     src/meshes/bridgeStairs.cpp
     src/meshes/bridgeDeck.cpp

@@ -22,5 +22,10 @@ public:
     static MObject inTreadDepth;
     static MObject inStepCount;
     static MObject inChamfer;
+    static MObject inBumpHeight;
+    static MObject inBumpFreq;
+    static MObject inNoiseOctaves;
+    static MObject inNoiseSeed;
+    static MObject inWeatherSubdiv;
     static MObject outMesh;
 };

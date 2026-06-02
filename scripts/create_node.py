@@ -1,49 +1,58 @@
 """
-Run this in Maya's Script Editor (Python tab) after building the plugin.
+Create both parametric nodes (a standalone staircase and a bridge) in Maya,
+each wired to a visible mesh.
 
-IMPORTANT: Set PLUGIN_PATH to the full path of your built .mll file.
-Example: r"C:\Users\Dami\...\build\Release\ParametricStaircaseNode.mll"
+Run in the Maya Script Editor (Python tab), or:
+    exec(open(r"<path>/create_node.py").read())
+
+Plug-in loading/reloading is handled by parametric_plugin.reload_plugin(), which
+always picks up a fresh build and verifies both node types registered.
 """
-import maya.cmds as cmds
 
-PLUGIN_PATH = r"C:\Users\Dami\OneDrive\Documents\My projects\ParametricModelling\build\Release\ParametricStaircaseNode.mll"
+import os
+import sys
 
-# ── Load plugin (safe to call if already loaded) ─────────────────────────────
-if not cmds.pluginInfo(PLUGIN_PATH, query=True, loaded=True):
-    cmds.loadPlugin(PLUGIN_PATH)
+# Make the shared helper importable no matter how this file is executed.
+_HERE = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() \
+    else os.path.dirname(r"C:\Users\Dami\OneDrive\Documents\My projects\ParametricModelling\scripts\create_node.py")
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-def _clean(name):
-    """Delete a node/transform if it exists from a previous run."""
-    if cmds.objExists(name):
-        cmds.delete(name)
+import parametric_plugin as pp
 
-def _wire_node(node_type, node_name, xform_name, shape_name, attrs):
-    """Create a parametric node, wire it to a mesh shape, set initial attrs."""
-    _clean(xform_name)
-    _clean(node_name)
+# ── 1. Clean reload (default = Release build) ─────────────────────────────────
+pp.reload_plugin()
 
-    node  = cmds.createNode(node_type, name=node_name)
-    xform = cmds.createNode("transform", name=xform_name)
-    shape = cmds.createNode("mesh", parent=xform, name=shape_name)
-
-    cmds.connectAttr(f"{node}.outMesh", f"{shape}.inMesh", force=True)
-    cmds.sets(shape, edit=True, forceElement="initialShadingGroup")
-
-    for attr, value in attrs.items():
-        cmds.setAttr(f"{node}.{attr}", value)
-
-    print(f"Created '{node}' connected to '{shape}'")
-    return node, shape
-
-# ── Staircase node ────────────────────────────────────────────────────────────
-_wire_node(
+# ── 2. Staircase node ─────────────────────────────────────────────────────────
+# Perlin tread weathering: noiseOctaves is the master switch (0 = smooth) and
+# bumpHeight must be non-zero to see it. Treads are small flat faces, so a small
+# amplitude + higher frequency reads as worn stone rather than big lumps.
+pp.build_mesh(
     "parametricStaircaseNode", "staircase1", "staircaseMesh", "staircaseMeshShape",
-    {"totalHeight": 3.0, "stairWidth": 2.0, "treadDepth": 0.3, "stepCount": 10}
+    {
+        "totalHeight": 3.0, "stairWidth": 2.0, "treadDepth": 0.3, "stepCount": 10,
+        "bumpHeight": 0.015,     # displacement amplitude (0 = flat treads)
+        "bumpFreq": 6.0,         # base noise frequency (higher = finer pitting)
+        "noiseOctaves": 4,       # fBm detail layers (0 = off)
+        "noiseSeed": 0,          # change for a different erosion pattern
+        "weatherSubdiv": 8,      # tessellation of the weathered tread face
+    },
 )
 
-# ── Bridge node ───────────────────────────────────────────────────────────────
-_wire_node(
+# ── 3. Bridge node ────────────────────────────────────────────────────────────
+# Same weathering controls; here the noise displaces the voussoir tops along the
+# arch normal (and the smooth deck strip when voussoirCount <= 1).
+pp.build_mesh(
     "parametricBridgeNode", "bridge1", "bridgeMesh", "bridgeMeshShape",
-    {"totalHeight": 3.0, "stairWidth": 2.0, "treadDepth": 0.3, "stepCount": 10, "bridgeLength": 5.0}
+    {
+        "totalHeight": 3.0, "stairWidth": 2.0, "treadDepth": 0.3, "stepCount": 10,
+        "bridgeLength": 5.0,
+        "bumpHeight": 0.06,      # displacement amplitude (0 = flat)
+        "bumpFreq": 2.0,         # base noise frequency
+        "noiseOctaves": 4,       # fBm detail layers (0 = off, 4-5 = rough)
+        "noiseSeed": 0,          # change for a different erosion pattern
+        "weatherSubdiv": 8,      # tessellation of weathered surfaces
+    },
 )
+
+print("Done. Tweak parameters in the Attribute Editor under 'staircase1' / 'bridge1'.")

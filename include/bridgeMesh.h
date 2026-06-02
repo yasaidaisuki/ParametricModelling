@@ -19,6 +19,10 @@ struct BridgeParams {
     double voussoirTaper    = 0.0;
     double jointGap         = 0.0;
     double keystoneScale    = 0.0;
+    // perlin weathering (drives the same bumpHeight amplitude as the sin/cos ripple)
+    int noiseOctaves        = 0;    // 0 = no weathering (smooth surface)
+    int noiseSeed           = 0;
+    int weatherSubdiv       = 4;    // tessellation of weathered faces
 };
 
 void buildBridgeMesh(

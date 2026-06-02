@@ -1,4 +1,5 @@
 #include "bridgeDeck.h"
+#include "noise.h"
 #include <maya/MPoint.h>
 #include <cmath>
 #include <vector>
@@ -7,6 +8,7 @@ void appendArcDeck(
     double xStart, double yBase, double width, double thickness,
     double length, double archHeight, int segments,
     double bumpHeight, double bumpFreq,
+    int noiseOctaves, int noiseSeed,
     MPointArray& points,
     MIntArray&   faceCounts,
     MIntArray&   faceConnects)
@@ -18,8 +20,11 @@ void appendArcDeck(
         const double t = (double)i / N;
         const double x = xStart + t * length;
         const double y = yBase + archHeight * 3.0 * t * (1.0 - t);
-        const double dispNear = bumpHeight * std::sin(x * bumpFreq) * std::cos(0.0   * bumpFreq);
-        const double dispFar  = bumpHeight * std::sin(x * bumpFreq) * std::cos(width * bumpFreq);
+        const double yTop = y + thickness;
+        const double dispNear = bumpHeight * fbm(x * bumpFreq, yTop * bumpFreq, 0.0,
+                                                 noiseOctaves, noiseSeed);
+        const double dispFar  = bumpHeight * fbm(x * bumpFreq, yTop * bumpFreq, width * bumpFreq,
+                                                 noiseOctaves, noiseSeed);
         points.append(MPoint(x, y,                        0.0  ));  // v0 bottom near
         points.append(MPoint(x, y + thickness + dispNear, 0.0  ));  // v1 top near
         points.append(MPoint(x, y,                        width));  // v2 bottom far
@@ -56,6 +61,7 @@ void appendVoussoirArch(
     double length, double archHeight, int count,
     double taper, double jointGap, double keystoneScale,
     double bumpHeight, double bumpFreq,
+    int noiseOctaves, int noiseSeed, int weatherSubdiv,
     MPointArray& points,
     MIntArray&   faceCounts,
     MIntArray&   faceConnects)
@@ -127,9 +133,11 @@ void appendVoussoirArch(
         points.append(MPoint(xb + oxB, yb + oyB, 0.0  ));  // b+6  end   near
         points.append(MPoint(xb + oxB, yb + oyB, width));  // b+7  end   far
 
-        const int q[6][4] = {
+        // All faces except the extrados stay flat quads on the 8 corners. The
+        // extrados (visible top of the stone) is replaced below by a subdivided,
+        // weathered grid, so it is omitted here.
+        const int q[5][4] = {
             {0, 2, 3, 1},  // intrados -Y (curved underside)
-            {4, 5, 7, 6},  // extrados +Y
             {0, 1, 5, 4},  // start joint
             {2, 6, 7, 3},  // end joint
             {0, 4, 6, 2},  // near side -Z (visible arch face)
@@ -139,5 +147,57 @@ void appendVoussoirArch(
             faceCounts.append(4);
             for (int v : f) faceConnects.append(b + v);
         }
+
+        // --- weathered extrados: subdivided grid pushed along the arch normal ---
+        // The four extrados corners (b+4 start-near, b+5 start-far, b+6 end-near,
+        // b+7 end-far) define a bilinear patch. fi runs start->end along the arc,
+        // fj runs near->far across the width. We sample fBm at each grid vertex and
+        // displace along the local arch normal. Displacement is faded to zero on
+        // all four borders so the grid stays welded to the adjoining flat faces.
+        const int   n  = weatherSubdiv < 1 ? 1 : weatherSubdiv;
+        const int   gb = static_cast<int>(points.length());
+        const MPoint p4 = points[b + 4], p5 = points[b + 5];
+        const MPoint p6 = points[b + 6], p7 = points[b + 7];
+
+        for (int gj = 0; gj <= n; ++gj) {
+            const double fj = (double)gj / n;
+            for (int gi = 0; gi <= n; ++gi) {
+                const double fi = (double)gi / n;
+                // bilinear position on the flat extrados patch
+                const MPoint near = p4 + (p6 - p4) * fi;   // start-near -> end-near
+                const MPoint far  = p5 + (p7 - p5) * fi;   // start-far  -> end-far
+                MPoint pos        = near + (far - near) * fj;
+
+                // arch normal at this arc position (interpolate the block's t-range)
+                double nx, ny;
+                normalAt(a + (bT - a) * fi, nx, ny);
+
+                // fade displacement to zero on the borders to avoid seams
+                constexpr double kPi = 3.14159265358979323846;
+                const double edgeFade = std::sin(fi * kPi) * std::sin(fj * kPi);
+                const double d = bumpHeight * edgeFade *
+                    fbm(pos.x * bumpFreq, pos.y * bumpFreq, pos.z * bumpFreq,
+                        noiseOctaves, noiseSeed);
+
+                pos.x += nx * d;
+                pos.y += ny * d;   // normal has no Z component (arch lies in X/Y)
+                points.append(pos);
+            }
+        }
+
+        const int stride = n + 1;
+        for (int gj = 0; gj < n; ++gj)
+            for (int gi = 0; gi < n; ++gi) {
+                const int v0 = gb + gj*stride + gi;
+                const int v1 = gb + gj*stride + gi + 1;
+                const int v2 = gb + (gj+1)*stride + gi + 1;
+                const int v3 = gb + (gj+1)*stride + gi;
+                // winding matches the old {4,5,7,6} extrados (near->far->far->near)
+                faceCounts.append(4);
+                faceConnects.append(v0);
+                faceConnects.append(v3);
+                faceConnects.append(v2);
+                faceConnects.append(v1);
+            }
     }
 }

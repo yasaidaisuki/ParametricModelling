@@ -41,11 +41,13 @@ void buildBridgeMesh(
                            p.bridgeLength, p.archHeight, p.voussoir,
                            p.voussoirTaper, p.jointGap, p.keystoneScale,
                            p.bumpHeight, p.bumpFreq,
+                           p.noiseOctaves, p.noiseSeed, p.weatherSubdiv,
                            points, faceCounts, faceConnects);
     } else {
         appendArcDeck(deckStartX, deckTopY, p.stairWidth, rh,
                       p.bridgeLength, p.archHeight, p.deckSegments,
                       p.bumpHeight, p.bumpFreq,
+                      p.noiseOctaves, p.noiseSeed,
                       points, faceCounts, faceConnects);
     }
 

@@ -33,5 +33,8 @@ public:
     static MObject inVoussoirTaper;
     static MObject inJointGap;
     static MObject inKeystoneScale;
+    static MObject inNoiseOctaves;
+    static MObject inNoiseSeed;
+    static MObject inWeatherSubdiv;
     static MObject outMesh;
 };

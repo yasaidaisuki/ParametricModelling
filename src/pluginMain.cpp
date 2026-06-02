@@ -14,7 +14,10 @@ MStatus initializePlugin(MObject obj) {
         ParametricStaircaseNode::creator,
         ParametricStaircaseNode::initialize
     );
-    if (!status) return status;
+    if (!status) {
+        status.perror("registerNode parametricStaircaseNode failed");
+        return status;
+    }
 
     status = plugin.registerNode(
         "parametricBridgeNode",
@@ -22,6 +25,14 @@ MStatus initializePlugin(MObject obj) {
         ParametricBridgeNode::creator,
         ParametricBridgeNode::initialize
     );
+    if (!status) {
+        // Don't leave the plugin half-registered: roll back the staircase node so
+        // loadPlugin reports overall failure instead of silently exposing one node.
+        status.perror("registerNode parametricBridgeNode failed");
+        plugin.deregisterNode(ParametricStaircaseNode::id);
+        return status;
+    }
+
     return status;
 }
 
