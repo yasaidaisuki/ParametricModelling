@@ -25,5 +25,9 @@ public:
     static MObject inDeckScale;
     static MObject inDeckSegments;
     static MObject inArchHeight;
+    static MObject inStepSubdivisions;
+    static MObject inBumpHeight;
+    static MObject inBumpFreq;
+    static MObject inChamfer;
     static MObject outMesh;
 };

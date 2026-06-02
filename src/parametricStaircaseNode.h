@@ -21,5 +21,6 @@ public:
     static MObject inStairWidth;
     static MObject inTreadDepth;
     static MObject inStepCount;
+    static MObject inChamfer;
     static MObject outMesh;
 };

@@ -1,6 +1,6 @@
 # Custom Parametric Geometry Node for Maya
 
-A C++ Maya plug-in that adds a custom dependency graph node for generating procedural polygon geometry in real time. Users control parameters such as height, width, step count, segment count, and optional curve input, and the node computes a clean polygon mesh through the OpenMaya API. [1][2][3]
+A C++ Maya plug-in that adds custom dependency graph nodes for generating procedural polygon geometry in real time. Users control parameters such as height, width, step count, segment count, arch height, and surface displacement, and the node computes a clean polygon mesh through the OpenMaya API. [1][2][3]
 
 ## Overview
 
@@ -11,38 +11,49 @@ Instead of building a procedural asset inside a higher-level graph tool, this pr
 ## Features
 
 - Real-time procedural polygon mesh generation from numeric attributes. [4][7]
-- Custom DG node implemented in C++ with the Maya API. [1][8]
-- Optional NURBS curve input for path-based generation, such as bridges or ramps; Maya supports curve data objects in DG nodes, and curve values can be read from typed handles with `asNurbsCurve()`. [9][10]
+- Custom DG nodes implemented in C++ with the Maya API. [1][8]
+- Chamfered step nosings on both ascending and descending stair runs.
+- Parabolic arch profile on the bridge deck, controlled by a single `archHeight` parameter.
+- Per-face tessellation on deck steps with sin/cos surface displacement (`bumpHeight`, `bumpFreq`).
 - Mesh output created as dependency graph data using `MFnMeshData` and `MFnMesh`. [2][3]
-- Native Maya plug-in loading through `loadPlugin`, Plug-in Manager, or a configured plug-in path; Autodesk documents `loadPlugin` and standard plug-in search behavior through `MAYA_PLUG_IN_PATH`. [11][12][13]
+- Native Maya plug-in loading through `loadPlugin`, Plug-in Manager, or a configured plug-in path. [11][12][13]
 
-## Project Ideas
+## Nodes
 
 ### `parametricStaircaseNode`
 
-A staircase generator with inputs such as:
+Generates a staircase from repeated chamfered steps. Inputs:
 
-- Total height
-- Stair width
-- Tread depth
-- Step count
-- Landing length
-- Optional side rail toggle
+| Attribute | Type | Description |
+|---|---|---|
+| `totalHeight` | double | Total rise of the staircase |
+| `stairWidth` | double | Depth-wise width of each step |
+| `treadDepth` | double | Horizontal run of each tread |
+| `stepCount` | int | Number of steps |
+| `chamfer` | double | Nosing bevel size (clamped to prevent degeneracy) |
 
-The node computes repeated treads and risers, assembles the vertex list and face connectivity, and outputs a single polygon mesh. This matches Autodesk’s documented examples of custom nodes that generate polygonal geometry in `compute()`. [14][15]
+Each step is a 10-vertex chamfered box (5 quads + 2 pentagons). A diagonal underside face connects adjacent steps into a solid continuous mesh.
 
 ### `parametricBridgeNode`
 
-A bridge generator with inputs such as:
+Generates a full bridge: ascending stairs on the left, an arc deck, and descending stairs on the right. Inputs:
 
-- Deck width
-- Deck thickness
-- Segment count
-- Rail height
-- Support spacing
-- Input curve
+| Attribute | Type | Description |
+|---|---|---|
+| `totalHeight` | double | Height of each stair run |
+| `stairWidth` | double | Width of the structure |
+| `treadDepth` | double | Horizontal run per step |
+| `stepCount` | int | Steps on each side |
+| `chamfer` | double | Nosing bevel on stair steps |
+| `bridgeLength` | double | Length of the flat deck span |
+| `deckScale` | double | Multiplier applied to `bridgeLength` |
+| `deckSegments` | int | Longitudinal tessellation of the deck |
+| `archHeight` | double | Peak rise of the parabolic arch |
+| `stepSubdivisions` | int | Grid tessellation on deck-step faces |
+| `bumpHeight` | double | Amplitude of sin/cos surface displacement |
+| `bumpFreq` | double | Frequency of the displacement pattern |
 
-This version uses a curve as the procedural guide and generates repeated structural segments along it. Maya’s API supports NURBS curve data objects for dependency graph workflows, making curve-driven procedural geometry a natural extension of the node design. [9][16][10]
+The deck follows a parabolic profile `y = base + archHeight × 3t(1−t)` and each top face can be displaced with a `sin(x·freq) × cos(z·freq)` ripple.
 
 ## Tech Stack
 
@@ -73,11 +84,15 @@ public:
 
     static MTypeId id;
 
-    static MObject inputWidth;
-    static MObject inputHeight;
-    static MObject inputSegments;
-    static MObject inputCurve;
-    static MObject outputMesh;
+    static MObject inTotalHeight;
+    static MObject inStairWidth;
+    static MObject inTreadDepth;
+    static MObject inStepCount;
+    static MObject inBridgeLength;
+    static MObject inArchHeight;
+    static MObject inBumpHeight;
+    static MObject inBumpFreq;
+    static MObject outMesh;
 };
 ```
 
@@ -91,18 +106,22 @@ MStatus uninitializePlugin(MObject obj);
 ## Project Structure
 
 ```text
-custom-parametric-node/
+ParametricModelling/
 ├── README.md
+├── CMakeLists.txt
 ├── src/
 │   ├── pluginMain.cpp
 │   ├── parametricBridgeNode.cpp
 │   ├── parametricBridgeNode.h
-│   └── meshBuilder.cpp
+│   ├── parametricStaircaseNode.cpp
+│   ├── parametricStaircaseNode.h
+│   ├── bridgeMesh.cpp
+│   └── staircaseMesh.cpp
 ├── include/
-│   └── meshBuilder.h
-├── CMakeLists.txt
+│   ├── bridgeMesh.h
+│   └── staircaseMesh.h
 └── scripts/
-    └── create_node.py
+    └── create_bridge.py
 ```
 
 A structure like this keeps Maya registration code separate from geometry-generation logic. The plug-in entry point handles node registration, while the node source focuses on attributes and `compute()`. [5][1]
@@ -124,10 +143,12 @@ The exact build steps depend on your Maya version, platform, and compiler toolch
 cmake_minimum_required(VERSION 3.20)
 project(CustomParametricNode)
 
-add_library(CustomParametricNode SHARED
+add_library(ParametricStaircaseNode SHARED
     src/pluginMain.cpp
     src/parametricBridgeNode.cpp
-    src/meshBuilder.cpp
+    src/parametricStaircaseNode.cpp
+    src/bridgeMesh.cpp
+    src/staircaseMesh.cpp
 )
 
 target_include_directories(CustomParametricNode PRIVATE
@@ -176,18 +197,12 @@ node = cmds.createNode("parametricBridgeNode")
 ### Adjust attributes
 
 ```python
-cmds.setAttr(f"{node}.width", 6.0)
-cmds.setAttr(f"{node}.height", 2.0)
-cmds.setAttr(f"{node}.segments", 24)
+cmds.setAttr(f"{node}.totalHeight",  3.0)
+cmds.setAttr(f"{node}.stairWidth",   2.0)
+cmds.setAttr(f"{node}.bridgeLength", 8.0)
+cmds.setAttr(f"{node}.archHeight",   1.5)
+cmds.setAttr(f"{node}.deckSegments", 16)
 ```
-
-### Connect a curve input
-
-```python
-cmds.connectAttr("curveShape1.worldSpace[0]", f"{node}.inputCurve", force=True)
-```
-
-For curve-driven generation, the node reads the connected curve data and rebuilds the output mesh when the curve or parameters change. Maya’s DG model is specifically designed so upstream changes dirty dependent outputs and trigger recomputation. [6][8]
 
 ### Connect mesh output
 
@@ -197,19 +212,15 @@ In many Maya workflows, the generated mesh is connected to a mesh shape node or 
 
 1. Load the plug-in into Maya; Autodesk documents `loadPlugin` and Plug-in Manager as standard entry points for plug-in activation. [11][13]
 2. Create a `parametricStaircaseNode` or `parametricBridgeNode` instance; registered node types can be instantiated from Maya commands once the plug-in is loaded. [1][20]
-3. Adjust numeric inputs such as width, height, or step count.
-4. Optionally connect a NURBS curve for path-based generation; Maya supports NURBS curve data in dependency graph nodes. [9][10]
-5. Let Maya re-evaluate the node and regenerate the polygon mesh output in real time; this is the expected DG behavior for custom computation nodes. [6][8]
+3. Adjust numeric inputs such as width, height, step count, arch height, or bump parameters.
+4. Let Maya re-evaluate the node and regenerate the polygon mesh output in real time; this is the expected DG behavior for custom computation nodes. [6][8]
 
-## Future Work
+## Planned Features
 
-- UV generation for texturing-ready assets.
-- Hard-edge and smoothing controls.
-- Procedural supports, rails, bolts, or trim pieces.
-- Preset profiles for different staircase or bridge styles.
-- Multiple outputs, such as render mesh and low-res collision mesh.
-
-These are practical extensions because the custom node already owns the procedural rules and the mesh construction stage. Maya’s mesh data workflow supports building more advanced procedural outputs on top of the same node architecture. [2][3]
+- **UV mapping** — texturing-ready UVs baked directly into the mesh output; U follows the length axis, V the cross-section.
+- **Stone coursing gaps** — horizontal offset joints between voussoir rows on the arch face.
+- **Voussoir / arch rhythm** — segmented arch blocks with per-keystone control over spacing and taper.
+- **Perlin noise weathering** — replace the current sin/cos bump with coherent Perlin noise for more organic surface erosion.
 
 ## Screenshots
 
@@ -227,7 +238,7 @@ Add your preferred license here, such as MIT.
 
 ## Short Repo Description
 
-A Maya C++ plug-in that creates a custom dependency graph node for procedural polygon generation, with artist-controlled parameters and optional curve-driven mesh construction through the OpenMaya API. [1][2][10]
+A Maya C++ plug-in implementing two custom dependency graph nodes — a parametric staircase and a bridge with a parabolic arch deck — built directly against the OpenMaya API with artist-controlled attributes and real-time mesh recomputation. [1][2][3]
 
 ## References
 

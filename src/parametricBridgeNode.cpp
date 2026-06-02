@@ -1,5 +1,5 @@
 #include "parametricBridgeNode.h"
-#include "meshBuilder.h"
+#include "bridgeMesh.h"
 
 #include <maya/MFnMesh.h>
 #include <maya/MFnMeshData.h>
@@ -20,6 +20,10 @@ MObject ParametricBridgeNode::inBridgeLength;
 MObject ParametricBridgeNode::inDeckScale;
 MObject ParametricBridgeNode::inDeckSegments;
 MObject ParametricBridgeNode::inArchHeight;
+MObject ParametricBridgeNode::inStepSubdivisions;
+MObject ParametricBridgeNode::inBumpHeight;
+MObject ParametricBridgeNode::inBumpFreq;
+MObject ParametricBridgeNode::inChamfer;
 MObject ParametricBridgeNode::outMesh;
 
 void* ParametricBridgeNode::creator() {
@@ -71,6 +75,26 @@ MStatus ParametricBridgeNode::initialize() {
     nAttr.setKeyable(true);
     addAttribute(inArchHeight);
 
+    inStepSubdivisions = nAttr.create("stepSubdivisions", "ss", MFnNumericData::kInt, 4);
+    nAttr.setMin(1);
+    nAttr.setMax(32);
+    nAttr.setKeyable(true);
+    addAttribute(inStepSubdivisions);
+
+    inBumpHeight = nAttr.create("bumpHeight", "bh", MFnNumericData::kDouble, 0.0);
+    nAttr.setKeyable(true);
+    addAttribute(inBumpHeight);
+
+    inBumpFreq = nAttr.create("bumpFreq", "bf", MFnNumericData::kDouble, 1.0);
+    nAttr.setMin(0.001);
+    nAttr.setKeyable(true);
+    addAttribute(inBumpFreq);
+
+    inChamfer = nAttr.create("chamfer", "ch", MFnNumericData::kDouble, 0.03);
+    nAttr.setMin(0.0);
+    nAttr.setKeyable(true);
+    addAttribute(inChamfer);
+
     outMesh = tAttr.create("outMesh", "om", MFnData::kMesh);
     tAttr.setStorable(false);
     tAttr.setWritable(false);
@@ -83,7 +107,11 @@ MStatus ParametricBridgeNode::initialize() {
     attributeAffects(inBridgeLength,  outMesh);
     attributeAffects(inDeckScale,     outMesh);
     attributeAffects(inDeckSegments,  outMesh);
-    attributeAffects(inArchHeight,    outMesh);
+    attributeAffects(inArchHeight,         outMesh);
+    attributeAffects(inStepSubdivisions,   outMesh);
+    attributeAffects(inBumpHeight,         outMesh);
+    attributeAffects(inBumpFreq,           outMesh);
+    attributeAffects(inChamfer,            outMesh);
 
     return MS::kSuccess;
 }
@@ -99,8 +127,12 @@ MStatus ParametricBridgeNode::compute(const MPlug& plug, MDataBlock& data) {
     params.stepCount    = data.inputValue(inStepCount).asInt();
     params.bridgeLength  = data.inputValue(inBridgeLength).asDouble()
                          * data.inputValue(inDeckScale).asDouble();
-    params.deckSegments  = data.inputValue(inDeckSegments).asInt();
-    params.archHeight    = data.inputValue(inArchHeight).asDouble();
+    params.deckSegments     = data.inputValue(inDeckSegments).asInt();
+    params.archHeight       = data.inputValue(inArchHeight).asDouble();
+    params.stepSubdivisions = data.inputValue(inStepSubdivisions).asInt();
+    params.bumpHeight       = data.inputValue(inBumpHeight).asDouble();
+    params.bumpFreq         = data.inputValue(inBumpFreq).asDouble();
+    params.chamfer          = data.inputValue(inChamfer).asDouble();
 
     MPointArray points;
     MIntArray   faceCounts;

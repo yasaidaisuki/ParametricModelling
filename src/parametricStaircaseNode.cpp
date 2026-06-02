@@ -1,5 +1,5 @@
 #include "parametricStaircaseNode.h"
-#include "meshBuilder.h"
+#include "staircaseMesh.h"
 
 #include <maya/MFnMesh.h>
 #include <maya/MFnMeshData.h>
@@ -16,6 +16,7 @@ MObject ParametricStaircaseNode::inTotalHeight;
 MObject ParametricStaircaseNode::inStairWidth;
 MObject ParametricStaircaseNode::inTreadDepth;
 MObject ParametricStaircaseNode::inStepCount;
+MObject ParametricStaircaseNode::inChamfer;
 MObject ParametricStaircaseNode::outMesh;
 
 void* ParametricStaircaseNode::creator() {
@@ -47,6 +48,11 @@ MStatus ParametricStaircaseNode::initialize() {
     nAttr.setKeyable(true);
     addAttribute(inStepCount);
 
+    inChamfer = nAttr.create("chamfer", "ch", MFnNumericData::kDouble, 0.03);
+    nAttr.setMin(0.0);
+    nAttr.setKeyable(true);
+    addAttribute(inChamfer);
+
     outMesh = tAttr.create("outMesh", "om", MFnData::kMesh);
     tAttr.setStorable(false);
     tAttr.setWritable(false);
@@ -56,6 +62,7 @@ MStatus ParametricStaircaseNode::initialize() {
     attributeAffects(inStairWidth,   outMesh);
     attributeAffects(inTreadDepth,   outMesh);
     attributeAffects(inStepCount,    outMesh);
+    attributeAffects(inChamfer,      outMesh);
 
     return MS::kSuccess;
 }
@@ -69,6 +76,7 @@ MStatus ParametricStaircaseNode::compute(const MPlug& plug, MDataBlock& data) {
     params.stairWidth   = data.inputValue(inStairWidth).asDouble();
     params.treadDepth   = data.inputValue(inTreadDepth).asDouble();
     params.stepCount    = data.inputValue(inStepCount).asInt();
+    params.chamfer      = data.inputValue(inChamfer).asDouble();
 
     MPointArray points;
     MIntArray   faceCounts;

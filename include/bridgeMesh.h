@@ -1,0 +1,24 @@
+#pragma once
+#include <maya/MPointArray.h>
+#include <maya/MIntArray.h>
+
+struct BridgeParams {
+    int    stepCount;
+    double totalHeight;
+    double stairWidth;
+    double treadDepth;
+    double bridgeLength;
+    int    deckSegments     = 10;
+    double archHeight       = 0.0;
+    int    stepSubdivisions = 4;
+    double bumpHeight       = 0.0;
+    double bumpFreq         = 1.0;
+    double chamfer          = 0.03;
+};
+
+void buildBridgeMesh(
+    const BridgeParams& params,
+    MPointArray&        points,
+    MIntArray&          faceCounts,
+    MIntArray&          faceConnects
+);
