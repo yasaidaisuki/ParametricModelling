@@ -7,6 +7,9 @@ computes a clean polygon mesh through the OpenMaya API. [1][2][3]
 
 📖 **[Features & node reference](docs/FEATURES.md)** · 🛠️ **[Build & usage guide](docs/USAGE.md)**
 
+**Demo Video:**
+[![Watch the video](https://youtu.be/WY59ia8HdZk)](https://youtu.be/WY59ia8HdZk)
+
 ## Overview
 
 This project implements a native Maya plug-in in C++ using the Maya Developer Kit and OpenMaya. Maya’s dependency graph plug-in model is built around custom nodes derived from `MPxNode`, where `compute()` defines the node’s behavior and `registerNode()` exposes the new node type to Maya. [1][4][5]
