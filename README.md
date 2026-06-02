@@ -1,6 +1,11 @@
 # Custom Parametric Geometry Node for Maya
 
-A C++ Maya plug-in that adds custom dependency graph nodes for generating procedural polygon geometry in real time. Users control parameters such as height, width, step count, segment count, arch height, and surface displacement, and the node computes a clean polygon mesh through the OpenMaya API. [1][2][3]
+A C++ Maya plug-in that adds custom dependency graph nodes for generating procedural
+polygon geometry in real time. Users control numeric parameters — height, width, step
+count, segment count, arch height, surface displacement, and more — and the node
+computes a clean polygon mesh through the OpenMaya API. [1][2][3]
+
+📖 **[Features & node reference](docs/FEATURES.md)** · 🛠️ **[Build & usage guide](docs/USAGE.md)**
 
 ## Overview
 
@@ -8,65 +13,10 @@ This project implements a native Maya plug-in in C++ using the Maya Developer Ki
 
 Instead of building a procedural asset inside a higher-level graph tool, this project creates the generator directly at the API level. The node reads artist-friendly attributes, performs geometric calculations in C++, creates mesh data with `MFnMeshData`, and outputs polygon geometry that can participate in Maya’s normal construction-history workflow. [2][6][3]
 
-## Features
-
-- Real-time procedural polygon mesh generation from numeric attributes. [4][7]
-- Custom DG nodes implemented in C++ with the Maya API. [1][8]
-- Chamfered step nosings on both ascending and descending stair runs.
-- Parabolic arch profile on the bridge deck, controlled by a single `archHeight` parameter.
-- Segmented voussoir arch on the bridge deck — discrete arch blocks with mortar joints, per-block taper, and a widenable keystone (`voussoirCount`, `voussoirTaper`, `jointGap`, `keystoneScale`).
-- Fractal Perlin-noise weathering on weathered surfaces — voussoir tops (displaced along the arch normal), the smooth deck strip, and staircase treads. Driven by `bumpHeight`/`bumpFreq` with `noiseOctaves` (roughness) and `noiseSeed` (per-instance variation); `weatherSubdiv` controls tessellation. `noiseOctaves = 0` leaves surfaces smooth.
-- Mesh output created as dependency graph data using `MFnMeshData` and `MFnMesh`. [2][3]
-- Native Maya plug-in loading through `loadPlugin`, Plug-in Manager, or a configured plug-in path. [11][12][13]
-
-## Nodes
-
-### `parametricStaircaseNode`
-
-Generates a staircase from repeated chamfered steps. Inputs:
-
-| Attribute | Type | Description |
-|---|---|---|
-| `totalHeight` | double | Total rise of the staircase |
-| `stairWidth` | double | Depth-wise width of each step |
-| `treadDepth` | double | Horizontal run of each tread |
-| `stepCount` | int | Number of steps |
-| `chamfer` | double | Nosing bevel size (clamped to prevent degeneracy) |
-| `bumpHeight` | double | Amplitude of Perlin tread weathering (0 = flat treads) |
-| `bumpFreq` | double | Base noise frequency |
-| `noiseOctaves` | int | fBm detail layers; `0` = no weathering |
-| `noiseSeed` | int | Seed for per-instance noise variation |
-| `weatherSubdiv` | int | Tessellation of the weathered tread face |
-
-Each step is a 10-vertex chamfered box (4 flat quads + a subdivided tread grid + 2 pentagons). A diagonal underside face connects adjacent steps into a solid continuous mesh. The tread (`+Y`) face is built as a `weatherSubdiv`-resolution grid and displaced in `+Y` by fractal Perlin noise, faded to zero on its borders so it stays welded to the surrounding faces.
-
-### `parametricBridgeNode`
-
-Generates a full bridge: ascending stairs on the left, an arc deck, and descending stairs on the right. Inputs:
-
-| Attribute | Type | Description |
-|---|---|---|
-| `totalHeight` | double | Height of each stair run |
-| `stairWidth` | double | Width of the structure |
-| `treadDepth` | double | Horizontal run per step |
-| `stepCount` | int | Steps on each side |
-| `chamfer` | double | Nosing bevel on stair steps |
-| `bridgeLength` | double | Length of the flat deck span |
-| `deckScale` | double | Multiplier applied to `bridgeLength` |
-| `deckSegments` | int | Longitudinal tessellation of the deck |
-| `archHeight` | double | Peak rise of the parabolic arch |
-| `stepSubdivisions` | int | Grid tessellation on deck-step faces |
-| `bumpHeight` | double | Amplitude of Perlin surface weathering |
-| `bumpFreq` | double | Base noise frequency |
-| `voussoirCount` | int | Number of arch blocks; `≤ 1` falls back to a smooth deck strip |
-| `voussoirTaper` | double | Sideways lean of each block, from 0 (straight up) to following the arch normal |
-| `jointGap` | double | Width of the mortar joint carved between adjacent voussoirs |
-| `keystoneScale` | double | Widens the centre keystone block (odd `voussoirCount` only) |
-| `noiseOctaves` | int | fBm detail layers for weathering; `0` = smooth |
-| `noiseSeed` | int | Seed for per-instance noise variation |
-| `weatherSubdiv` | int | Tessellation of weathered voussoir tops |
-
-The deck follows a parabolic profile `y = base + archHeight × 3t(1−t)`. When `voussoirCount > 1` the span is built as discrete arch blocks (voussoirs) with mortar gaps and an optional widened keystone, rather than a continuous strip. Weathered surfaces are displaced by fractal Perlin noise (fBm): voussoir tops push outward along the arch normal, while the smooth deck strip displaces its top edge. Displacement fades to zero on face borders so subdivided grids stay welded to adjoining flat faces.
+The plug-in ships two node types — a parametric staircase and a parametric bridge with
+a parabolic/voussoir arch deck — both with Perlin-noise surface weathering. For the full
+feature list, per-node attribute tables, and known limitations, see
+**[docs/FEATURES.md](docs/FEATURES.md)**.
 
 ## Tech Stack
 
@@ -121,6 +71,9 @@ MStatus uninitializePlugin(MObject obj);
 ```text
 ParametricModelling/
 ├── README.md
+├── docs/
+│   ├── FEATURES.md             # feature list + per-node attribute reference
+│   └── USAGE.md                # build, install, and driving the nodes
 ├── CMakeLists.txt
 ├── src/
 │   ├── pluginMain.cpp
@@ -146,9 +99,14 @@ ParametricModelling/
 
 A structure like this keeps Maya registration code separate from geometry-generation logic. The plug-in entry point handles node registration, while the node source focuses on attributes and `compute()`. [5][1]
 
-## Build
+## Build & Install
 
-The exact build steps depend on your Maya version, platform, and compiler toolchain, but the common setup is the same: point your project at the Maya SDK headers and libraries, compile a shared library, and produce the platform-specific Maya plug-in binary. Autodesk’s `loadPlugin` documentation notes the expected binary extensions: `.mll` on Windows, `.so` on Linux, and `.bundle` on macOS. [12]
+The detailed, version-specific guide — prerequisites, a Windows CMake build, three load
+options, and troubleshooting — lives in **[docs/USAGE.md](docs/USAGE.md)**. The general
+shape of any Maya plug-in build is: point your project at the Maya SDK headers and
+libraries, compile a shared library, and produce the platform-specific Maya plug-in
+binary. Autodesk’s `loadPlugin` documentation notes the expected binary extensions:
+`.mll` on Windows, `.so` on Linux, and `.bundle` on macOS. [12]
 
 ### General build steps
 
@@ -183,72 +141,19 @@ target_link_libraries(CustomParametricNode
 
 This is a starter outline, not a drop-in cross-platform solution. Maya plug-in builds typically require version-specific SDK paths, compiler settings, and platform naming conventions. [12][13]
 
-## Installation
-
-Autodesk documents several ways to install Maya plug-ins, including using the Plug-in Manager, browsing directly to the binary, or placing the plug-in in a directory searched through `MAYA_PLUG_IN_PATH`. [11][12][13]
-
-### Option 1: Plug-in Manager
-
-1. Launch Maya.
-2. Open **Window > Settings/Preferences > Plug-in Manager**; Autodesk’s installation docs identify this as the standard UI for loading plug-ins. [13]
-3. Browse to your compiled plug-in file.
-4. Enable **Loaded** and optionally **Auto Load**; similar Autodesk installation guidance describes loading and auto-loading through the Plug-in Manager. [19][13]
-
-### Option 2: Script Editor
-
-```python
-import maya.cmds as cmds
-cmds.loadPlugin("/full/path/to/CustomParametricNode.mll")
-```
-
-Autodesk documents the `loadPlugin` command for loading plug-ins by name or full path. It also notes Maya’s platform-specific file extensions and plug-in path search behavior. [11][12]
-
 ## Usage
 
-Once the plug-in is loaded, Maya can create instances of the custom node type. Autodesk’s DG documentation shows that after a node type is registered, it can be created directly with `createNode("mynode")`. [1][20]
-
-### Create the node
+Once the plug-in is loaded, Maya can create instances of the custom node type. After a
+node type is registered, it can be created directly with `createNode("parametricBridgeNode")`,
+wired to a visible mesh shape, and driven by `setAttr`. The full create-and-drive
+walkthrough, the bundled demo script, and a node/attribute reference are in
+**[docs/USAGE.md](docs/USAGE.md)** and **[docs/FEATURES.md](docs/FEATURES.md)**. [1][20]
 
 ```python
 import maya.cmds as cmds
 node = cmds.createNode("parametricBridgeNode")
+cmds.setAttr(f"{node}.archHeight", 1.5)
 ```
-
-### Adjust attributes
-
-```python
-cmds.setAttr(f"{node}.totalHeight",  3.0)
-cmds.setAttr(f"{node}.stairWidth",   2.0)
-cmds.setAttr(f"{node}.bridgeLength", 8.0)
-cmds.setAttr(f"{node}.archHeight",   1.5)
-cmds.setAttr(f"{node}.deckSegments", 16)
-```
-
-### Connect mesh output
-
-In many Maya workflows, the generated mesh is connected to a mesh shape node or wrapped in helper logic that makes the output visible in the viewport. Autodesk’s mesh-producing examples show custom nodes constructing polygon output inside `compute()`. [14][15]
-
-## Example Workflow
-
-1. Load the plug-in into Maya; Autodesk documents `loadPlugin` and Plug-in Manager as standard entry points for plug-in activation. [11][13]
-2. Create a `parametricStaircaseNode` or `parametricBridgeNode` instance; registered node types can be instantiated from Maya commands once the plug-in is loaded. [1][20]
-3. Adjust numeric inputs such as width, height, step count, arch height, or bump parameters.
-4. Let Maya re-evaluate the node and regenerate the polygon mesh output in real time; this is the expected DG behavior for custom computation nodes. [6][8]
-
-## v1 Roadmap
-
-Targeted for the v1 launch:
-
-- **UV mapping** — texturing-ready UVs baked directly into the mesh output; U follows the length axis, V the cross-section.
-
-### Later
-
-- **Stone coursing gaps** — horizontal offset joints between stacked voussoir *rows* on the arch face. The current arch is a single row of blocks; multi-row coursing is not yet implemented.
-
-### Known limitations
-
-- Faces are emitted with their own vertices rather than a shared/welded vertex pool. Weathered grids stay visually seamless because border displacement is faded to zero, but the boundary vertices are coincident-but-distinct, so edge-based mesh operations in Maya will see split edges.
-- The smooth deck strip (`voussoirCount ≤ 1`) displaces its top edge without an edge fade, matching the original ripple behavior; its end caps can shift slightly when `noiseOctaves > 0`.
 
 ## Screenshots
 
@@ -259,10 +164,6 @@ Add images here once the node is running in Maya:
 ![Attribute editor](docs/images/attributes.png)
 ![Wireframe output](docs/images/wireframe.png)
 ```
-
-## License
-
-Add your preferred license here, such as MIT.
 
 ## Short Repo Description
 
