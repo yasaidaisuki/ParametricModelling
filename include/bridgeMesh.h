@@ -14,6 +14,11 @@ struct BridgeParams {
     double bumpHeight       = 0.0;
     double bumpFreq         = 1.0;
     double chamfer          = 0.03;
+    // voussoir & arc rythm
+    int voussoir            = 1;
+    double voussoirTaper    = 0.0;
+    double jointGap         = 0.0;
+    double keystoneScale    = 0.0;
 };
 
 void buildBridgeMesh(

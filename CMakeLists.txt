@@ -17,8 +17,11 @@ add_library(ParametricStaircaseNode SHARED
     src/pluginMain.cpp
     src/parametricStaircaseNode.cpp
     src/parametricBridgeNode.cpp
-    src/staircaseMesh.cpp
-    src/bridgeMesh.cpp
+    src/meshes/staircaseMesh.cpp
+    src/meshes/meshPrimitives.cpp
+    src/meshes/bridgeMesh.cpp
+    src/meshes/bridgeStairs.cpp
+    src/meshes/bridgeDeck.cpp
 )
 
 target_include_directories(ParametricStaircaseNode PRIVATE

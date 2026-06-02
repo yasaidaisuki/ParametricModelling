@@ -11,22 +11,25 @@ import maya.cmds as cmds
 
 PLUGIN_NAME  = "ParametricStaircaseNode"
 PLUGIN_PATH  = r"C:\Users\Dami\OneDrive\Documents\My projects\ParametricModelling\build\Debug\ParametricStaircaseNode.mll"
-FORCE_RELOAD = False
+FORCE_RELOAD = True
 
-# ── 1. Load plugin ────────────────────────────────────────────────────────────
+# ── 1. Clean up previous run ──────────────────────────────────────────────────
+# Must happen BEFORE any unload: Maya refuses to unload a plugin while nodes it
+# defines are still in the scene, which would silently leave the stale build loaded.
+for name in ("bridge1", "bridgeNode1"):
+    if cmds.objExists(name):
+        cmds.delete(name)
+
+# ── 2. Load plugin (force a clean reload to pick up a fresh build) ─────────────
 if FORCE_RELOAD and cmds.pluginInfo(PLUGIN_NAME, query=True, loaded=True):
-    cmds.unloadPlugin(PLUGIN_NAME)
+    cmds.flushUndo()  # drop undo refs to old nodes so the unload can succeed
+    cmds.unloadPlugin(PLUGIN_NAME, force=True)
 
 if not cmds.pluginInfo(PLUGIN_NAME, query=True, loaded=True):
     cmds.loadPlugin(PLUGIN_PATH)
     print(f"Loaded plugin: {PLUGIN_PATH}")
 else:
     print("Plugin already loaded.")
-
-# ── 2. Clean up previous run ──────────────────────────────────────────────────
-for name in ("bridge1", "bridgeNode1"):
-    if cmds.objExists(name):
-        cmds.delete(name)
 
 # ── 3. Create the DG node ─────────────────────────────────────────────────────
 bridge_node = cmds.createNode("parametricBridgeNode", name="bridgeNode1")
@@ -44,6 +47,10 @@ cmds.setAttr(f"{bridge_node}.stepSubdivisions", 2)
 cmds.setAttr(f"{bridge_node}.bumpHeight",       0.0)
 cmds.setAttr(f"{bridge_node}.bumpFreq",         1.0)
 cmds.setAttr(f"{bridge_node}.chamfer",          0.1)
+cmds.setAttr(f"{bridge_node}.voussoirCount",    9)     # >1 ⇒ segmented arch (1 ⇒ smooth deck)
+cmds.setAttr(f"{bridge_node}.voussoirTaper",    0.6)   # 0 = flat slab, 1 = full radial wedge
+cmds.setAttr(f"{bridge_node}.jointGap",         0.04)  # mortar gap between stones
+cmds.setAttr(f"{bridge_node}.keystoneScale",    1.6)   # central stone width multiplier
 
 # ── 5. Create mesh transform + shape and wire up outMesh → inMesh ─────────────
 mesh_transform = cmds.createNode("transform", name="bridge1")

@@ -24,6 +24,10 @@ MObject ParametricBridgeNode::inStepSubdivisions;
 MObject ParametricBridgeNode::inBumpHeight;
 MObject ParametricBridgeNode::inBumpFreq;
 MObject ParametricBridgeNode::inChamfer;
+MObject ParametricBridgeNode::inVoussoirCount;
+MObject ParametricBridgeNode::inVoussoirTaper;
+MObject ParametricBridgeNode::inJointGap;
+MObject ParametricBridgeNode::inKeystoneScale;
 MObject ParametricBridgeNode::outMesh;
 
 void* ParametricBridgeNode::creator() {
@@ -95,6 +99,28 @@ MStatus ParametricBridgeNode::initialize() {
     nAttr.setKeyable(true);
     addAttribute(inChamfer);
 
+    inVoussoirCount = nAttr.create("voussoirCount", "vc", MFnNumericData::kInt, 1);
+    nAttr.setMin(1);
+    nAttr.setMax(99);
+    nAttr.setKeyable(true);
+    addAttribute(inVoussoirCount);
+
+    inVoussoirTaper = nAttr.create("voussoirTaper", "vt", MFnNumericData::kDouble, 0.0);
+    nAttr.setMin(0.0);
+    nAttr.setMax(1.0);
+    nAttr.setKeyable(true);
+    addAttribute(inVoussoirTaper);
+
+    inJointGap = nAttr.create("jointGap", "jg", MFnNumericData::kDouble, 0.0);
+    nAttr.setMin(0.0);
+    nAttr.setKeyable(true);
+    addAttribute(inJointGap);
+
+    inKeystoneScale = nAttr.create("keystoneScale", "ks", MFnNumericData::kDouble, 1.0);
+    nAttr.setMin(0.1);
+    nAttr.setKeyable(true);
+    addAttribute(inKeystoneScale);
+
     outMesh = tAttr.create("outMesh", "om", MFnData::kMesh);
     tAttr.setStorable(false);
     tAttr.setWritable(false);
@@ -112,6 +138,10 @@ MStatus ParametricBridgeNode::initialize() {
     attributeAffects(inBumpHeight,         outMesh);
     attributeAffects(inBumpFreq,           outMesh);
     attributeAffects(inChamfer,            outMesh);
+    attributeAffects(inVoussoirCount,      outMesh);
+    attributeAffects(inVoussoirTaper,      outMesh);
+    attributeAffects(inJointGap,           outMesh);
+    attributeAffects(inKeystoneScale,      outMesh);
 
     return MS::kSuccess;
 }
@@ -133,6 +163,10 @@ MStatus ParametricBridgeNode::compute(const MPlug& plug, MDataBlock& data) {
     params.bumpHeight       = data.inputValue(inBumpHeight).asDouble();
     params.bumpFreq         = data.inputValue(inBumpFreq).asDouble();
     params.chamfer          = data.inputValue(inChamfer).asDouble();
+    params.voussoir         = data.inputValue(inVoussoirCount).asInt();
+    params.voussoirTaper    = data.inputValue(inVoussoirTaper).asDouble();
+    params.jointGap         = data.inputValue(inJointGap).asDouble();
+    params.keystoneScale    = data.inputValue(inKeystoneScale).asDouble();
 
     MPointArray points;
     MIntArray   faceCounts;

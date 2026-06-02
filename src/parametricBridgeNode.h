@@ -29,5 +29,9 @@ public:
     static MObject inBumpHeight;
     static MObject inBumpFreq;
     static MObject inChamfer;
+    static MObject inVoussoirCount;
+    static MObject inVoussoirTaper;
+    static MObject inJointGap;
+    static MObject inKeystoneScale;
     static MObject outMesh;
 };
